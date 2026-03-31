@@ -4,6 +4,12 @@ import { testsAPI, questionsAPI, categoriesAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 
+interface QuestionType {
+  id: string;
+  name: string;
+  label: string;
+}
+
 export default function TestConstructor() {
   const [tests, setTests] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -23,6 +29,7 @@ export default function TestConstructor() {
     typeId: '',
     options: [{ text: '', isCorrect: false }],
   });
+  const [questionTypes, setQuestionTypes] = useState<QuestionType[]>([]);
   const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
 
   const { user } = useAuthStore();
@@ -30,7 +37,17 @@ export default function TestConstructor() {
   useEffect(() => {
     loadTests();
     loadCategories();
+    loadQuestionTypes();
   }, []);
+
+  const loadQuestionTypes = async () => {
+    try {
+      const response = await questionsAPI.getTypes();
+      setQuestionTypes(response.data);
+    } catch (error: any) {
+      toast.error('Ошибка загрузки типов вопросов');
+    }
+  };
 
   const loadCategories = async () => {
     try {
@@ -100,11 +117,17 @@ export default function TestConstructor() {
     }
     
     try {
+      const singleChoiceType = questionTypes.find(t => t.name === 'SINGLE');
+      if (!singleChoiceType) {
+        toast.error('Тип вопроса не найден');
+        return;
+      }
+
       const questionData = {
         text: currentQuestion.text,
         order: currentQuestion.order,
         testId: selectedTestId,
-        typeId: '5e54e71c-cc66-4a99-84b3-b318507851fe', // SINGLE_CHOICE ID
+        typeId: singleChoiceType.id,
         options: currentQuestion.options.filter(opt => opt.text.trim()),
       };
       console.log('Sending question data:', questionData);
