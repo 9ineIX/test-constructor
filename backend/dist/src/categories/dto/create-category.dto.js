@@ -19,7 +19,9 @@ __decorate([
     (0, swagger_1.ApiProperty)({ example: 'Mathematics', description: 'Category name' }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.MinLength)(2, { message: 'Category name must be at least 2 characters long' }),
     (0, class_validator_1.MaxLength)(100),
+    (0, class_validator_1.Matches)(/^[a-zA-Zа-яА-ЯёЁ0-9\s\-]+$/, { message: 'Category name can only contain letters, numbers, spaces and hyphens' }),
     __metadata("design:type", String)
 ], CreateCategoryDto.prototype, "name", void 0);
 __decorate([

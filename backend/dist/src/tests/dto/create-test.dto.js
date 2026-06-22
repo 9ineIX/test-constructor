@@ -19,6 +19,7 @@ __decorate([
     (0, swagger_1.ApiProperty)({ example: 'Math Test', description: 'Test title' }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.MinLength)(3, { message: 'Test title must be at least 3 characters long' }),
     (0, class_validator_1.MaxLength)(255),
     __metadata("design:type", String)
 ], CreateTestDto.prototype, "title", void 0);

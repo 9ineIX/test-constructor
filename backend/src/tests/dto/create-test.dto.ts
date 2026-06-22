@@ -1,10 +1,11 @@
-import { IsString, IsNotEmpty, IsOptional, IsArray, IsUUID, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsArray, IsUUID, MaxLength, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateTestDto {
   @ApiProperty({ example: 'Math Test', description: 'Test title' })
   @IsString()
   @IsNotEmpty()
+  @MinLength(3, { message: 'Test title must be at least 3 characters long' })
   @MaxLength(255)
   title: string;
 

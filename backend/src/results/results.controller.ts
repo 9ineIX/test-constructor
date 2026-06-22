@@ -34,15 +34,6 @@ export class ResultsController {
     return this.resultsService.findAll(req.user.id, req.user.role);
   }
 
-  @Get(':id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get result by id' })
-  @ApiResponse({ status: 200, description: 'Result found' })
-  findOne(@Param('id') id: string, @Request() req) {
-    return this.resultsService.findById(id, req.user.id, req.user.role);
-  }
-
   @Get('test/:testId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('TEACHER', 'ADMIN')
@@ -51,5 +42,14 @@ export class ResultsController {
   @ApiResponse({ status: 200, description: 'Test results' })
   getTestResults(@Param('testId') testId: string, @Request() req) {
     return this.resultsService.getTestResults(testId, req.user.id, req.user.role);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get result by id' })
+  @ApiResponse({ status: 200, description: 'Result found' })
+  findOne(@Param('id') id: string, @Request() req) {
+    return this.resultsService.findById(id, req.user.id, req.user.role);
   }
 }

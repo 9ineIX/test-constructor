@@ -57,14 +57,14 @@ let AuthService = class AuthService {
         this.configService = configService;
     }
     async register(data) {
-        const { email, password, name, roleName = 'STUDENT' } = data;
+        const { email, password, name } = data;
         const existingUser = await this.usersService.findByEmail(email);
         if (existingUser) {
             throw new common_1.ConflictException('User with this email already exists');
         }
-        const role = await this.rolesService.findByName(roleName);
+        const role = await this.rolesService.findByName('STUDENT');
         if (!role) {
-            throw new common_1.ConflictException(`Role '${roleName}' not found`);
+            throw new common_1.ConflictException('Role STUDENT not found');
         }
         return this.usersService.create({
             email,

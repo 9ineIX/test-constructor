@@ -3,6 +3,31 @@ import { Plus, Users, Settings, FileText, Edit, Trash2, Shield, Database, Trendi
 import { usersAPI, rolesAPI, testsAPI, categoriesAPI, resultsAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const userSchema = z.object({
+  email: z.string().email('Некорректный email адрес'),
+  name: z.string().min(2, 'Имя должно содержать минимум 2 символа').optional(),
+  password: z.string().min(6, 'Пароль должен содержать минимум 6 символов').optional().or(z.literal('')),
+  roleId: z.string().min(1, 'Выберите роль'),
+});
+
+type UserFormData = z.infer<typeof userSchema>;
+
+const roleSchema = z.object({
+  name: z.string().min(3, 'Название роли должно содержать минимум 3 символа').regex(/^[A-Z_]+$/, 'Название роли должно содержать только заглавные буквы и подчеркивания'),
+});
+
+type RoleFormData = z.infer<typeof roleSchema>;
+
+const categorySchema = z.object({
+  name: z.string().min(2, 'Название категории должно содержать минимум 2 символа').regex(/^[a-zA-Zа-яА-ЯёЁ0-9\s\-]+$/, 'Название категории может содержать только буквы, цифры, пробелы и дефисы'),
+  description: z.string().optional(),
+});
+
+type CategoryFormData = z.infer<typeof categorySchema>;
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
@@ -17,29 +42,53 @@ export default function AdminDashboard() {
   const [showUserForm, setShowUserForm] = useState(false);
   const [showRoleForm, setShowRoleForm] = useState(false);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const [editingRole, setEditingRole] = useState(null);
-  const [editingCategory, setEditingCategory] = useState(null);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editingRole, setEditingRole] = useState<any>(null);
+  const [editingCategory, setEditingCategory] = useState<any>(null);
   
-  const [userForm, setUserForm] = useState({
-    email: '',
-    name: '',
-    password: '',
-    roleId: ''
+  const {
+    register: registerUser,
+    handleSubmit: handleSubmitUser,
+    formState: { errors: userErrors },
+    reset: resetUser,
+  } = useForm<UserFormData>({
+    resolver: zodResolver(userSchema),
+    defaultValues: {
+      email: '',
+      name: '',
+      password: '',
+      roleId: '',
+    },
   });
-  
-  const [roleForm, setRoleForm] = useState({
-    name: ''
+
+  const {
+    register: registerRole,
+    handleSubmit: handleSubmitRole,
+    formState: { errors: roleErrors },
+    reset: resetRole,
+  } = useForm<RoleFormData>({
+    resolver: zodResolver(roleSchema),
+    defaultValues: {
+      name: '',
+    },
   });
-  
-  const [categoryForm, setCategoryForm] = useState({
-    name: '',
-    description: ''
+
+  const {
+    register: registerCategory,
+    handleSubmit: handleSubmitCategory,
+    formState: { errors: categoryErrors },
+    reset: resetCategory,
+  } = useForm<CategoryFormData>({
+    resolver: zodResolver(categorySchema),
+    defaultValues: {
+      name: '',
+      description: '',
+    },
   });
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [activeTab]);
 
   const loadData = async () => {
     try {
@@ -64,25 +113,43 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleCreateUser = async () => {
+  const handleCreateUser = async (data: UserFormData) => {
     try {
-      await usersAPI.create(userForm);
+      const userData: any = {
+        email: data.email,
+        name: data.name,
+        roleId: data.roleId,
+      };
+      if (data.password) {
+        userData.password = data.password;
+      }
+      await usersAPI.create(userData);
       toast.success('Пользователь создан');
       setShowUserForm(false);
-      setUserForm({ email: '', name: '', password: '', roleId: '' });
+      resetUser();
       loadData();
     } catch (error) {
       toast.error('Ошибка создания пользователя');
     }
   };
 
-  const handleUpdateUser = async () => {
+  const handleUpdateUser = async (data: UserFormData) => {
+    if (!editingUser) return;
+    
     try {
-      await usersAPI.update(editingUser.id, userForm);
+      const userData: any = {
+        email: data.email,
+        name: data.name,
+        roleId: data.roleId,
+      };
+      if (data.password) {
+        userData.password = data.password;
+      }
+      await usersAPI.update(editingUser.id, userData);
       toast.success('Пользователь обновлен');
       setShowUserForm(false);
       setEditingUser(null);
-      setUserForm({ email: '', name: '', password: '', roleId: '' });
+      resetUser();
       loadData();
     } catch (error) {
       toast.error('Ошибка обновления пользователя');
@@ -101,25 +168,27 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleCreateRole = async () => {
+  const handleCreateRole = async (data: RoleFormData) => {
     try {
-      await rolesAPI.create(roleForm);
+      await rolesAPI.create(data);
       toast.success('Роль создана');
       setShowRoleForm(false);
-      setRoleForm({ name: '' });
+      resetRole();
       loadData();
     } catch (error) {
       toast.error('Ошибка создания роли');
     }
   };
 
-  const handleUpdateRole = async () => {
+  const handleUpdateRole = async (data: RoleFormData) => {
+    if (!editingRole) return;
+    
     try {
-      await rolesAPI.update(editingRole.id, roleForm);
+      await rolesAPI.update(editingRole.id, data);
       toast.success('Роль обновлена');
       setShowRoleForm(false);
       setEditingRole(null);
-      setRoleForm({ name: '' });
+      resetRole();
       loadData();
     } catch (error) {
       toast.error('Ошибка обновления роли');
@@ -138,25 +207,27 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleCreateCategory = async () => {
+  const handleCreateCategory = async (data: CategoryFormData) => {
     try {
-      await categoriesAPI.create(categoryForm);
+      await categoriesAPI.create(data);
       toast.success('Категория создана');
       setShowCategoryForm(false);
-      setCategoryForm({ name: '', description: '' });
+      resetCategory();
       loadData();
     } catch (error) {
       toast.error('Ошибка создания категории');
     }
   };
 
-  const handleUpdateCategory = async () => {
+  const handleUpdateCategory = async (data: CategoryFormData) => {
+    if (!editingCategory) return;
+    
     try {
-      await categoriesAPI.update(editingCategory.id, categoryForm);
+      await categoriesAPI.update(editingCategory.id, data);
       toast.success('Категория обновлена');
       setShowCategoryForm(false);
       setEditingCategory(null);
-      setCategoryForm({ name: '', description: '' });
+      resetCategory();
       loadData();
     } catch (error) {
       toast.error('Ошибка обновления категории');
@@ -187,9 +258,9 @@ export default function AdminDashboard() {
     }
   };
 
-  const openUserForm = (user = null) => {
+  const openUserForm = (user: any = null) => {
     setEditingUser(user);
-    setUserForm(user ? {
+    resetUser(user ? {
       email: user.email,
       name: user.name,
       password: '',
@@ -203,15 +274,15 @@ export default function AdminDashboard() {
     setShowUserForm(true);
   };
 
-  const openRoleForm = (role = null) => {
+  const openRoleForm = (role: any = null) => {
     setEditingRole(role);
-    setRoleForm(role ? { name: role.name } : { name: '' });
+    resetRole(role ? { name: role.name } : { name: '' });
     setShowRoleForm(true);
   };
 
-  const openCategoryForm = (category = null) => {
+  const openCategoryForm = (category: any = null) => {
     setEditingCategory(category);
-    setCategoryForm(category ? {
+    resetCategory(category ? {
       name: category.name,
       description: category.description || ''
     } : {
@@ -370,13 +441,6 @@ export default function AdminDashboard() {
             <div>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-lg font-semibold text-gray-900">Роли</h2>
-                <button
-                  onClick={() => openRoleForm()}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Добавить роль
-                </button>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -508,63 +572,85 @@ export default function AdminDashboard() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">
               {editingUser ? 'Редактирование пользователя' : 'Создание пользователя'}
             </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Имя</label>
-                <input
-                  type="text"
-                  value={userForm.name}
-                  onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
+            <form onSubmit={editingUser ? handleSubmitUser(handleUpdateUser) : handleSubmitUser(handleCreateUser)}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Имя</label>
+                  <input
+                    {...registerUser('name')}
+                    type="text"
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                      userErrors.name ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  {userErrors.name && (
+                    <p className="mt-1 text-sm text-red-600">{userErrors.name.message}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                  <input
+                    {...registerUser('email')}
+                    type="email"
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                      userErrors.email ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  {userErrors.email && (
+                    <p className="mt-1 text-sm text-red-600">{userErrors.email.message}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Пароль</label>
+                  <input
+                    {...registerUser('password')}
+                    type="password"
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                      userErrors.password ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder={editingUser ? 'Оставьте пустым для сохранения текущего' : ''}
+                  />
+                  {userErrors.password && (
+                    <p className="mt-1 text-sm text-red-600">{userErrors.password.message}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Роль</label>
+                  <select
+                    {...registerUser('roleId')}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                      userErrors.roleId ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  >
+                    <option value="">Выберите роль</option>
+                    {roles.map((role: any) => (
+                      <option key={role.id} value={role.id}>{role.name}</option>
+                    ))}
+                  </select>
+                  {userErrors.roleId && (
+                    <p className="mt-1 text-sm text-red-600">{userErrors.roleId.message}</p>
+                  )}
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    {editingUser ? 'Обновить' : 'Создать'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUserForm(false);
+                      resetUser();
+                    }}
+                    className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                  >
+                    Отмена
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                <input
-                  type="email"
-                  value={userForm.email}
-                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Пароль</label>
-                <input
-                  type="password"
-                  value={userForm.password}
-                  onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  placeholder={editingUser ? 'Оставьте пустым для сохранения текущего' : ''}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Роль</label>
-                <select
-                  value={userForm.roleId}
-                  onChange={(e) => setUserForm({ ...userForm, roleId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                >
-                  <option value="">Выберите роль</option>
-                  {roles.map((role: any) => (
-                    <option key={role.id} value={role.id}>{role.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={editingUser ? handleUpdateUser : handleCreateUser}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  {editingUser ? 'Обновить' : 'Создать'}
-                </button>
-                <button
-                  onClick={() => setShowUserForm(false)}
-                  className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-                >
-                  Отмена
-                </button>
-              </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
@@ -575,31 +661,41 @@ export default function AdminDashboard() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">
               {editingRole ? 'Редактирование роли' : 'Создание роли'}
             </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Название</label>
-                <input
-                  type="text"
-                  value={roleForm.name}
-                  onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
+            <form onSubmit={editingRole ? handleSubmitRole(handleUpdateRole) : handleSubmitRole(handleCreateRole)}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Название</label>
+                  <input
+                    {...registerRole('name')}
+                    type="text"
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                      roleErrors.name ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  {roleErrors.name && (
+                    <p className="mt-1 text-sm text-red-600">{roleErrors.name.message}</p>
+                  )}
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    {editingRole ? 'Обновить' : 'Создать'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowRoleForm(false);
+                      resetRole();
+                    }}
+                    className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                  >
+                    Отмена
+                  </button>
+                </div>
               </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={editingRole ? handleUpdateRole : handleCreateRole}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  {editingRole ? 'Обновить' : 'Создать'}
-                </button>
-                <button
-                  onClick={() => setShowRoleForm(false)}
-                  className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-                >
-                  Отмена
-                </button>
-              </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
@@ -610,40 +706,49 @@ export default function AdminDashboard() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">
               {editingCategory ? 'Редактирование категории' : 'Создание категории'}
             </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Название</label>
-                <input
-                  type="text"
-                  value={categoryForm.name}
-                  onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
+            <form onSubmit={editingCategory ? handleSubmitCategory(handleUpdateCategory) : handleSubmitCategory(handleCreateCategory)}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Название</label>
+                  <input
+                    {...registerCategory('name')}
+                    type="text"
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                      categoryErrors.name ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  {categoryErrors.name && (
+                    <p className="mt-1 text-sm text-red-600">{categoryErrors.name.message}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Описание</label>
+                  <textarea
+                    {...registerCategory('description')}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    {editingCategory ? 'Обновить' : 'Создать'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCategoryForm(false);
+                      resetCategory();
+                    }}
+                    className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                  >
+                    Отмена
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Описание</label>
-                <textarea
-                  value={categoryForm.description}
-                  onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={editingCategory ? handleUpdateCategory : handleCreateCategory}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  {editingCategory ? 'Обновить' : 'Создать'}
-                </button>
-                <button
-                  onClick={() => setShowCategoryForm(false)}
-                  className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-                >
-                  Отмена
-                </button>
-              </div>
-            </div>
+            </form>
           </div>
         </div>
       )}

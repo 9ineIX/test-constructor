@@ -42,14 +42,14 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
-  @Get(':id')
+  @Get('students')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles('TEACHER', 'ADMIN')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get user by id' })
-  @ApiResponse({ status: 200, description: 'User found' })
-  findOne(@Param('id') id: string) {
-    return this.usersService.findById(id);
+  @ApiOperation({ summary: 'Get all students' })
+  @ApiResponse({ status: 200, description: 'List of all students' })
+  getAllStudents() {
+    return this.usersService.getAllStudents();
   }
 
   @Get('teacher/:teacherId/students')
@@ -60,6 +60,16 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'List of students with average scores' })
   getStudentsByTeacher(@Param('teacherId') teacherId: string) {
     return this.usersService.getStudentsByTeacher(teacherId);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get user by id' })
+  @ApiResponse({ status: 200, description: 'User found' })
+  findOne(@Param('id') id: string) {
+    return this.usersService.findById(id);
   }
 
   @Patch(':id')

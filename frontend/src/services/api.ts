@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3010';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3011';
 
 export interface LoginResponse {
   accessToken: string;
@@ -86,7 +86,7 @@ export const authAPI = {
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }),
   
-  register: (data: { email: string; password: string; name?: string; roleName?: string }) =>
+  register: (data: { email: string; password: string; name?: string }) =>
     api.post('/auth/register', data),
   
   refresh: (refreshToken: string) =>
@@ -177,6 +177,9 @@ export const usersAPI = {
   
   getTeacherStudents: (teacherId: string) =>
     api.get(`/users/teacher/${teacherId}/students`),
+  
+  getAllStudents: () =>
+    api.get('/users/students'),
 };
 
 export const rolesAPI = {

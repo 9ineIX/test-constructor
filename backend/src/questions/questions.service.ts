@@ -9,7 +9,7 @@ export class QuestionsService {
     try {
       console.log('Creating question with data:', data);
       console.log('User:', userId, 'Role:', userRole);
-      
+
       const test = await this.prisma.test.findUnique({
         where: { id: data.testId },
         include: {
@@ -29,6 +29,15 @@ export class QuestionsService {
         throw new BadRequestException('Test cannot have more than 10 questions');
       }
 
+      const existingQuestionWithSameOrder = test.questions.find(q => q.order === data.order);
+      if (existingQuestionWithSameOrder) {
+        throw new BadRequestException(`Question with order ${data.order} already exists in this test`);
+      }
+
+      if (data.options.length < 2) {
+        throw new BadRequestException('Question must have at least 2 options');
+      }
+
       if (data.options.length > 4) {
         throw new BadRequestException('Question cannot have more than 4 options');
       }
@@ -36,6 +45,11 @@ export class QuestionsService {
       const hasCorrectOption = data.options.some(option => option.isCorrect);
       if (!hasCorrectOption) {
         throw new BadRequestException('Question must have at least one correct option');
+      }
+
+      const hasEmptyOption = data.options.some(option => !option.text || option.text.trim() === '');
+      if (hasEmptyOption) {
+        throw new BadRequestException('Question options cannot be empty');
       }
 
       const result = await this.prisma.question.create({
@@ -57,7 +71,7 @@ export class QuestionsService {
           },
         },
       });
-      
+
       console.log('Question created successfully:', result);
       return result;
     } catch (error) {
@@ -151,14 +165,22 @@ export class QuestionsService {
 
     const { options, ...updateData } = data;
 
-    if (options && options.length > 4) {
-      throw new BadRequestException('Question cannot have more than 4 options');
-    }
-
     if (options) {
+      if (options.length < 2) {
+        throw new BadRequestException('Question must have at least 2 options');
+      }
+      if (options.length > 4) {
+        throw new BadRequestException('Question cannot have more than 4 options');
+      }
+
       const hasCorrectOption = options.some(option => option.isCorrect);
       if (!hasCorrectOption) {
         throw new BadRequestException('Question must have at least one correct option');
+      }
+
+      const hasEmptyOption = options.some(option => !option.text || option.text.trim() === '');
+      if (hasEmptyOption) {
+        throw new BadRequestException('Question options cannot be empty');
       }
     }
 

@@ -30,11 +30,31 @@ let RolesService = class RolesService {
         });
     }
     async create(data) {
+        const existingRole = await this.prisma.role.findUnique({
+            where: { name: data.name },
+        });
+        if (existingRole) {
+            throw new common_1.ConflictException('Role with this name already exists');
+        }
         return this.prisma.role.create({
             data,
         });
     }
     async update(id, data) {
+        const role = await this.prisma.role.findUnique({
+            where: { id },
+        });
+        if (!role) {
+            throw new common_1.NotFoundException('Role not found');
+        }
+        if (data.name && data.name !== role.name) {
+            const existingRole = await this.prisma.role.findUnique({
+                where: { name: data.name },
+            });
+            if (existingRole) {
+                throw new common_1.ConflictException('Role with this name already exists');
+            }
+        }
         return this.prisma.role.update({
             where: { id },
             data,

@@ -25,19 +25,15 @@ __decorate([
     (0, swagger_1.ApiProperty)({ example: 'password123', description: 'User password' }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.MinLength)(6, { message: 'Password must be at least 6 characters long' }),
     __metadata("design:type", String)
 ], RegisterDto.prototype, "password", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ example: 'John Doe', description: 'User name', required: false }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.MinLength)(2, { message: 'Name must be at least 2 characters long' }),
+    (0, class_validator_1.MaxLength)(100, { message: 'Name cannot exceed 100 characters' }),
     __metadata("design:type", String)
 ], RegisterDto.prototype, "name", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ example: 'STUDENT', description: 'User role', required: false }),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsIn)(['STUDENT', 'TEACHER', 'ADMIN']),
-    __metadata("design:type", String)
-], RegisterDto.prototype, "roleName", void 0);
 //# sourceMappingURL=register.dto.js.map

@@ -35,6 +35,17 @@ export declare class UsersController {
         email: string;
         roleId: string;
     }[]>;
+    getAllStudents(): Promise<{
+        id: string;
+        name: string;
+        role: {
+            id: string;
+            name: string;
+        };
+        email: string;
+        roleId: string;
+    }[]>;
+    getStudentsByTeacher(teacherId: string): Promise<any[]>;
     findOne(id: string): Promise<{
         id: string;
         name: string;
@@ -45,7 +56,6 @@ export declare class UsersController {
         email: string;
         roleId: string;
     }>;
-    getStudentsByTeacher(teacherId: string): Promise<any[]>;
     update(id: string, updateUserDto: UpdateUserDto): Promise<{
         id: string;
         name: string;
@@ -55,7 +65,6 @@ export declare class UsersController {
         };
         email: string;
         roleId: string;
-        createdAt: never;
     }>;
     updatePassword(id: string, updatePasswordDto: UpdatePasswordDto): Promise<{
         id: string;

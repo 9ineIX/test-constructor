@@ -91,7 +91,7 @@ export class UsersService {
     });
   }
 
-  async update(id: string, data: { email?: string; name?: string; roleId?: string }) {
+  async update(id: string, data: { email?: string; name?: string; roleId?: string; password?: string }) {
     const user = await this.prisma.user.findUnique({
       where: { id },
     });
@@ -110,16 +110,25 @@ export class UsersService {
       }
     }
 
+    const updateData: any = {
+      email: data.email,
+      name: data.name,
+      roleId: data.roleId,
+    };
+
+    if (data.password) {
+      updateData.password = await bcrypt.hash(data.password, 10);
+    }
+
     return this.prisma.user.update({
       where: { id },
-      data,
+      data: updateData,
       select: {
         id: true,
         email: true,
         name: true,
         roleId: true,
         role: true,
-        createdAt: true,
       },
     });
   }
@@ -127,11 +136,24 @@ export class UsersService {
   async delete(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
+      include: {
+        tests: true,
+        results: true,
+      },
     });
 
     if (!user) {
       throw new NotFoundException('User not found');
     }
+
+    // Delete associated tests and results first
+    await this.prisma.result.deleteMany({
+      where: { userId: id },
+    });
+
+    await this.prisma.test.deleteMany({
+      where: { authorId: id },
+    });
 
     return this.prisma.user.delete({
       where: { id },
@@ -215,5 +237,24 @@ export class UsersService {
     });
 
     return students;
+  }
+
+  async getAllStudents() {
+    const users = await this.prisma.user.findMany({
+      where: {
+        role: {
+          name: 'STUDENT',
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        roleId: true,
+        role: true,
+      },
+    });
+
+    return users;
   }
 }

@@ -19,6 +19,8 @@ __decorate([
     (0, swagger_1.ApiProperty)({ example: 'What is 2+2?', description: 'Question text' }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.MinLength)(5, { message: 'Question text must be at least 5 characters long' }),
+    (0, class_validator_1.MaxLength)(1000, { message: 'Question text cannot exceed 1000 characters' }),
     __metadata("design:type", String)
 ], CreateQuestionDto.prototype, "text", void 0);
 __decorate([
@@ -51,6 +53,8 @@ __decorate([
         description: 'Question options'
     }),
     (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ArrayMinSize)(2, { message: 'Question must have at least 2 options' }),
+    (0, class_validator_1.ArrayMaxSize)(4, { message: 'Question cannot have more than 4 options' }),
     __metadata("design:type", Array)
 ], CreateQuestionDto.prototype, "options", void 0);
 //# sourceMappingURL=create-question.dto.js.map

@@ -1,13 +1,43 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { LogOut, User, BookOpen, Users, Settings } from 'lucide-react';
+import { authAPI } from '../services/api';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const { user, logout } = useAuthStore();
+  const { user, logout, setAuth, accessToken, refreshToken } = useAuthStore();
+
+  useEffect(() => {
+    const refreshUserData = async () => {
+      if (accessToken && !user) {
+        try {
+          const response = await authAPI.getProfile();
+          if (response.data) {
+            const userData = Array.isArray(response.data) ? response.data[0] : response.data;
+            if (userData) {
+              setAuth(
+                {
+                  id: userData.id,
+                  email: userData.email,
+                  name: userData.name,
+                  role: userData.role?.name || userData.role,
+                },
+                accessToken,
+                refreshToken || ''
+              );
+            }
+          }
+        } catch (error) {
+          console.error('Error refreshing user data:', error);
+        }
+      }
+    };
+
+    refreshUserData();
+  }, [accessToken, user, setAuth, refreshToken]);
 
   const handleLogout = () => {
     logout();

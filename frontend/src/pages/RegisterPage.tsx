@@ -12,7 +12,6 @@ const registerSchema = z.object({
   password: z.string().min(6, 'Пароль должен содержать минимум 6 символов'),
   confirmPassword: z.string(),
   name: z.string().optional(),
-  roleName: z.enum(['STUDENT', 'TEACHER']).default('STUDENT'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Пароли не совпадают",
   path: ["confirmPassword"],
@@ -41,7 +40,6 @@ export default function RegisterPage() {
         email: data.email,
         password: data.password,
         name: data.name,
-        roleName: data.roleName,
       });
       
       toast.success('Регистрация успешна! Пожалуйста, войдите.');
@@ -102,22 +100,6 @@ export default function RegisterPage() {
               />
               {errors.name && (
                 <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-              )}
-            </div>
-            
-            <div>
-              <label htmlFor="roleName" className="block text-sm font-medium text-gray-700">
-                Роль
-              </label>
-              <select
-                {...register('roleName')}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              >
-                <option value="STUDENT">Студент</option>
-                <option value="TEACHER">Преподаватель</option>
-              </select>
-              {errors.roleName && (
-                <p className="mt-1 text-sm text-red-600">{errors.roleName.message}</p>
               )}
             </div>
             

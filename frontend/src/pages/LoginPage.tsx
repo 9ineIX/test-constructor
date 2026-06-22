@@ -33,10 +33,10 @@ export default function LoginPage() {
     try {
       const response = await authAPI.login(data.email, data.password);
       const { accessToken, refreshToken, user } = response.data;
-      
+
       setAuth(user, accessToken, refreshToken);
       toast.success('Вход выполнен успешно!');
-      
+
       // Redirect based on role
       switch (user.role) {
         case 'TEACHER':
@@ -52,7 +52,14 @@ export default function LoginPage() {
           window.location.href = '/dashboard';
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Ошибка входа');
+      console.error('Login error:', error);
+      if (error.response?.status === 401) {
+        toast.error('Неверный email или пароль');
+      } else if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error('Ошибка входа. Проверьте подключение к интернету');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -89,7 +96,9 @@ export default function LoginPage() {
                 {...register('email')}
                 type="email"
                 autoComplete="email"
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className={`mt-1 appearance-none relative block w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm ${
+                  errors.email ? 'border-red-500' : 'border-gray-300'
+                }`}
                 placeholder="Введите ваш email"
               />
               {errors.email && (
@@ -106,7 +115,9 @@ export default function LoginPage() {
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
-                  className="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  className={`appearance-none relative block w-full px-3 py-2 pr-10 border rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm ${
+                    errors.password ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Введите ваш пароль"
                 />
                 <button

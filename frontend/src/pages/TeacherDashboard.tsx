@@ -19,7 +19,7 @@ export default function TeacherDashboard() {
     try {
       const [testsRes, studentsRes, resultsRes] = await Promise.all([
         testsAPI.getAll(),
-        usersAPI.getTeacherStudents(user.id),
+        usersAPI.getAllStudents(),
         resultsAPI.getAll()
       ]);
       

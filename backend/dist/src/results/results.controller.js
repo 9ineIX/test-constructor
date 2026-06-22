@@ -35,11 +35,11 @@ let ResultsController = class ResultsController {
     findAll(req) {
         return this.resultsService.findAll(req.user.id, req.user.role);
     }
-    findOne(id, req) {
-        return this.resultsService.findById(id, req.user.id, req.user.role);
-    }
     getTestResults(testId, req) {
         return this.resultsService.getTestResults(testId, req.user.id, req.user.role);
+    }
+    findOne(id, req) {
+        return this.resultsService.findById(id, req.user.id, req.user.role);
     }
 };
 exports.ResultsController = ResultsController;
@@ -67,18 +67,6 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], ResultsController.prototype, "findAll", null);
 __decorate([
-    (0, common_1.Get)(':id'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    (0, swagger_1.ApiBearerAuth)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Get result by id' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'Result found' }),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Request)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", void 0)
-], ResultsController.prototype, "findOne", null);
-__decorate([
     (0, common_1.Get)('test/:testId'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('TEACHER', 'ADMIN'),
@@ -91,6 +79,18 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], ResultsController.prototype, "getTestResults", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Get result by id' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Result found' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], ResultsController.prototype, "findOne", null);
 exports.ResultsController = ResultsController = __decorate([
     (0, swagger_1.ApiTags)('results'),
     (0, common_1.Controller)('results'),

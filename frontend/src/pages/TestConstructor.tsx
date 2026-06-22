@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Plus, Save, Trash2, Edit } from 'lucide-react';
 import { testsAPI, questionsAPI, categoriesAPI } from '../services/api';
-import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 interface QuestionType {
   id: string;
@@ -10,19 +12,28 @@ interface QuestionType {
   label: string;
 }
 
+const testSchema = z.object({
+  title: z.string().min(3, 'Название теста должно содержать минимум 3 символа'),
+  description: z.string().optional(),
+  categoryIds: z.array(z.string()).min(1, 'Выберите хотя бы одну категорию'),
+});
+
+type TestFormData = z.infer<typeof testSchema>;
+
+const questionSchema = z.object({
+  text: z.string().min(5, 'Текст вопроса должен содержать минимум 5 символов'),
+});
+
+type QuestionFormData = z.infer<typeof questionSchema>;
+
 export default function TestConstructor() {
   const [tests, setTests] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [test, setTest] = useState({
-    title: '',
-    description: '',
-    categoryIds: [],
-  });
   const [questions, setQuestions] = useState<any[]>([]);
   const [showTestForm, setShowTestForm] = useState(false);
   const [showQuestionForm, setShowQuestionForm] = useState(false);
-  const [editingTest, setEditingTest] = useState(null);
-  const [editingQuestion, setEditingQuestion] = useState(null);
+  const [editingTest, setEditingTest] = useState<any>(null);
+  const [editingQuestion, setEditingQuestion] = useState<any>(null);
   const [currentQuestion, setCurrentQuestion] = useState({
     text: '',
     order: 1,
@@ -32,7 +43,35 @@ export default function TestConstructor() {
   const [questionTypes, setQuestionTypes] = useState<QuestionType[]>([]);
   const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
 
-  const { user } = useAuthStore();
+  const {
+    register: registerTest,
+    handleSubmit: handleSubmitTest,
+    formState: { errors: testErrors },
+    reset: resetTest,
+    watch,
+    setValue: setTestValue,
+  } = useForm<TestFormData>({
+    resolver: zodResolver(testSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      categoryIds: [],
+    },
+  });
+
+  const selectedCategoryIds = watch('categoryIds') || [];
+
+  const {
+    register: registerQuestion,
+    handleSubmit: handleSubmitQuestion,
+    formState: { errors: questionErrors },
+    reset: resetQuestion,
+  } = useForm<QuestionFormData>({
+    resolver: zodResolver(questionSchema),
+    defaultValues: {
+      text: '',
+    },
+  });
 
   useEffect(() => {
     loadTests();
@@ -81,13 +120,13 @@ export default function TestConstructor() {
     await loadQuestions(testId);
   };
 
-  const handleCreateTest = async () => {
+  const handleCreateTest = async (data: TestFormData) => {
     try {
-      const response = await testsAPI.create(test);
+      const response = await testsAPI.create(data);
       toast.success('Тест создан успешно!');
       setTests([...tests, response.data]);
       setSelectedTestId(response.data.id);
-      setTest({ title: '', description: '', categoryIds: [] });
+      resetTest();
       setShowTestForm(false);
       // Загружаем вопросы для нового теста
       await loadQuestions(response.data.id);
@@ -96,7 +135,7 @@ export default function TestConstructor() {
     }
   };
 
-  const handleCreateQuestion = async () => {
+  const handleCreateQuestion = async (data: QuestionFormData) => {
     if (!selectedTestId) {
       toast.error('Сначала создайте тест или выберите существующий');
       return;
@@ -109,13 +148,12 @@ export default function TestConstructor() {
       return;
     }
 
-    // Проверяем, что все варианты заполнены
-    const hasEmptyOptions = currentQuestion.options.some(option => !option.text.trim());
-    if (hasEmptyOptions) {
-      toast.error('Заполните все варианты ответа');
+    // Проверяем минимум 2 варианта
+    if (currentQuestion.options.length < 2) {
+      toast.error('Минимум 2 варианта ответа');
       return;
     }
-    
+
     try {
       const singleChoiceType = questionTypes.find(t => t.name === 'SINGLE');
       if (!singleChoiceType) {
@@ -123,9 +161,12 @@ export default function TestConstructor() {
         return;
       }
 
+      // Вычисляем следующий order на основе текущего количества вопросов
+      const nextOrder = questions.filter((q: any) => q.testId === selectedTestId).length + 1;
+
       const questionData = {
-        text: currentQuestion.text,
-        order: currentQuestion.order,
+        text: data.text,
+        order: nextOrder,
         testId: selectedTestId,
         typeId: singleChoiceType.id,
         options: currentQuestion.options.filter(opt => opt.text.trim()),
@@ -136,10 +177,11 @@ export default function TestConstructor() {
       setQuestions([...questions, response.data]);
       setCurrentQuestion({
         text: '',
-        order: questions.length + 1,
+        order: nextOrder + 1,
         typeId: '',
         options: [{ text: '', isCorrect: false }],
       });
+      resetQuestion();
       setShowQuestionForm(false);
       // Перезагружаем вопросы для теста
       await loadQuestions(selectedTestId);
@@ -173,15 +215,15 @@ export default function TestConstructor() {
     }
   };
 
-  const handleSaveTest = async () => {
+  const handleSaveTest = async (data: TestFormData) => {
     if (!editingTest) return;
-    
+
     try {
-      await testsAPI.update(editingTest.id, test);
+      await testsAPI.update(editingTest.id, data);
       toast.success('Тест обновлен успешно!');
-      setTests(tests.map(t => t.id === editingTest.id ? { ...t, ...test } : t));
+      setTests(tests.map((t: any) => t.id === editingTest.id ? { ...t, ...data } : t));
       setEditingTest(null);
-      setTest({ title: '', description: '', categoryIds: [] });
+      resetTest();
       setShowTestForm(false);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Ошибка обновления теста');
@@ -241,28 +283,28 @@ export default function TestConstructor() {
             </div>
           ) : (
             <div className="space-y-4">
-              {tests.map((test: any) => (
-                <div key={test.id} className={`border rounded-lg p-4 cursor-pointer ${
-                  selectedTestId === test.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
+              {tests.map((testItem: any) => (
+                <div key={testItem.id} className={`border rounded-lg p-4 cursor-pointer ${
+                  selectedTestId === testItem.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
                 }`}
-                  onClick={() => handleSelectTest(test.id)}
+                  onClick={() => handleSelectTest(testItem.id)}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h4 className="font-medium text-gray-900">{test.title}</h4>
-                      <p className="text-gray-700 mt-1">{test.description}</p>
+                      <h4 className="font-medium text-gray-900">{testItem.title}</h4>
+                      <p className="text-gray-700 mt-1">{testItem.description}</p>
                     </div>
                     <div className="flex space-x-2">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setTest({
-                            title: test.title,
-                            description: test.description,
-                            categoryIds: test.categories?.map((c: any) => c.id) || [],
+                          resetTest({
+                            title: testItem.title,
+                            description: testItem.description || '',
+                            categoryIds: testItem.categories?.map((c: any) => c.id) || [],
                           });
-                          setEditingTest(test);
-                          setSelectedTestId(test.id);
+                          setEditingTest(testItem);
+                          setSelectedTestId(testItem.id);
                           setShowTestForm(true);
                         }}
                         className="text-blue-600 hover:text-blue-800"
@@ -273,7 +315,7 @@ export default function TestConstructor() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDeleteTest(test.id);
+                          handleDeleteTest(testItem.id);
                         }}
                         className="text-red-600 hover:text-red-800"
                       >
@@ -285,7 +327,7 @@ export default function TestConstructor() {
 
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-500">
-                      {questions.filter((q: any) => q.testId === test.id).length} / 10 вопросов
+                      {questions.filter((q: any) => q.testId === testItem.id).length} / 10 вопросов
                     </span>
                   </div>
                 </div>
@@ -301,78 +343,90 @@ export default function TestConstructor() {
                 {editingTest ? 'Редактирование теста' : 'Создание нового теста'}
               </h3>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Название теста
-                  </label>
-                  <input
-                    type="text"
-                    value={test.title}
-                    onChange={(e) => setTest({ ...test, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Введите название теста"
-                  />
-                </div>
+              <form onSubmit={editingTest ? handleSubmitTest(handleSaveTest) : handleSubmitTest(handleCreateTest)}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Название теста
+                    </label>
+                    <input
+                      {...registerTest('title')}
+                      type="text"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                        testErrors.title ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="Введите название теста"
+                    />
+                    {testErrors.title && (
+                      <p className="mt-1 text-sm text-red-600">{testErrors.title.message}</p>
+                    )}
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Описание теста
-                  </label>
-                  <textarea
-                    value={test.description}
-                    onChange={(e) => setTest({ ...test, description: e.target.value })}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Введите описание теста"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Описание теста
+                    </label>
+                    <textarea
+                      {...registerTest('description')}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Введите описание теста"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Категории
-                  </label>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {categories.map((category) => (
-                      <label key={category.id} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={test.categoryIds.includes(category.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setTest({ ...test, categoryIds: [...test.categoryIds, category.id] });
-                            } else {
-                              setTest({ ...test, categoryIds: test.categoryIds.filter(id => id !== category.id) });
-                            }
-                          }}
-                          className="mr-2"
-                        />
-                        <span className="text-sm">{category.name}</span>
-                      </label>
-                    ))}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Категории
+                    </label>
+                    <div className={`space-y-2 max-h-32 overflow-y-auto p-2 border rounded-md ${
+                      testErrors.categoryIds ? 'border-red-500' : 'border-gray-300'
+                    }`}>
+                      {categories.map((category: any) => (
+                        <label key={category.id} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            value={category.id}
+                            checked={selectedCategoryIds.includes(category.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setTestValue('categoryIds', [...selectedCategoryIds, category.id]);
+                              } else {
+                                setTestValue('categoryIds', selectedCategoryIds.filter((id: string) => id !== category.id));
+                              }
+                            }}
+                            className="mr-2"
+                          />
+                          <span className="text-sm">{category.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {testErrors.categoryIds && (
+                      <p className="mt-1 text-sm text-red-600">{testErrors.categoryIds.message}</p>
+                    )}
+                  </div>
+
+                  <div className="flex space-x-2">
+                    <button
+                      type="submit"
+                      className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      {editingTest ? 'Сохранить' : 'Создать'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowTestForm(false);
+                        setEditingTest(null);
+                        resetTest();
+                      }}
+                      className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                    >
+                      Отмена
+                    </button>
                   </div>
                 </div>
-
-                <div className="flex space-x-2">
-                  <button
-                    onClick={editingTest ? handleSaveTest : handleCreateTest}
-                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {editingTest ? 'Сохранить' : 'Создать'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowTestForm(false);
-                      setEditingTest(null);
-                      setTest({ title: '', description: '', categoryIds: [] });
-                    }}
-                    className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-                  >
-                    Отмена
-                  </button>
-                </div>
-              </div>
+              </form>
             </div>
           </div>
         )}
@@ -454,85 +508,86 @@ export default function TestConstructor() {
                 {editingQuestion ? 'Редактирование вопроса' : 'Создание нового вопроса'}
               </h3>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Текст вопроса
-                  </label>
-                  <textarea
-                    value={currentQuestion.text}
-                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, text: e.target.value })}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Введите текст вопроса"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Порядковый номер
-                  </label>
-                  <input
-                    type="number"
-                    value={currentQuestion.order}
-                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, order: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    min="1"
-                    max="10"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Варианты ответа
-                  </label>
-                  <div className="space-y-2">
-                    {currentQuestion.options.map((option, index) => (
-                      <div key={index} className="flex items-center space-x-2">
-                        <input
-                          type="text"
-                          value={option.text}
-                          onChange={(e) => updateOption(index, 'text', e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          placeholder={`Вариант ${index + 1}`}
-                        />
-                        <input
-                          type="checkbox"
-                          checked={option.isCorrect}
-                          onChange={(e) => updateOption(index, 'isCorrect', e.target.checked)}
-                          className="w-4 h-4 text-blue-600"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeOption(index)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
+              <form onSubmit={handleSubmitQuestion(handleCreateQuestion)}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Текст вопроса
+                    </label>
+                    <textarea
+                      {...registerQuestion('text')}
+                      rows={3}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                        questionErrors.text ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="Введите текст вопроса"
+                    />
+                    {questionErrors.text && (
+                      <p className="mt-1 text-sm text-red-600">{questionErrors.text.message}</p>
+                    )}
                   </div>
-                </div>
 
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => addOption()}
-                    className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Добавить вариант
-                  </button>
-                  <button
-                    onClick={handleCreateQuestion}
-                    className="flex items-center px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    Сохранить и продолжить
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowQuestionForm(false);
-                      setCurrentQuestion({
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Варианты ответа
+                    </label>
+                    <div className="space-y-2">
+                      {currentQuestion.options.map((option, index) => (
+                        <div key={index} className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            value={option.text}
+                            onChange={(e) => updateOption(index, 'text', e.target.value)}
+                            className={`flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                              !option.text.trim() ? 'border-red-500' : 'border-gray-300'
+                            }`}
+                            placeholder={`Вариант ${index + 1}`}
+                          />
+                          <input
+                            type="checkbox"
+                            checked={option.isCorrect}
+                            onChange={(e) => updateOption(index, 'isCorrect', e.target.checked)}
+                            className="w-4 h-4 text-blue-600"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeOption(index)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    {currentQuestion.options.length < 2 && (
+                      <p className="mt-1 text-sm text-red-600">Минимум 2 варианта ответа</p>
+                    )}
+                    {currentQuestion.options.length > 4 && (
+                      <p className="mt-1 text-sm text-red-600">Максимум 4 варианта ответа</p>
+                    )}
+                  </div>
+
+                  <div className="flex space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => addOption()}
+                      className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Добавить вариант
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex items-center px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      Сохранить
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowQuestionForm(false);
+                        setCurrentQuestion({
                         text: '',
                         order: questions.length + 1,
                         typeId: '',
@@ -546,6 +601,7 @@ export default function TestConstructor() {
                   </button>
                 </div>
               </div>
+              </form>
             </div>
           </div>
         )}

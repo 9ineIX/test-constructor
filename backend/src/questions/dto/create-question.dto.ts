@@ -1,10 +1,12 @@
-import { IsString, IsNotEmpty, IsNumber, IsArray, IsUUID, IsBoolean, Max, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsArray, IsUUID, IsBoolean, Max, Min, MinLength, MaxLength, ArrayMinSize, ArrayMaxSize } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateQuestionDto {
   @ApiProperty({ example: 'What is 2+2?', description: 'Question text' })
   @IsString()
   @IsNotEmpty()
+  @MinLength(5, { message: 'Question text must be at least 5 characters long' })
+  @MaxLength(1000, { message: 'Question text cannot exceed 1000 characters' })
   text: string;
 
   @ApiProperty({ example: 1, description: 'Question order in test' })
@@ -33,5 +35,7 @@ export class CreateQuestionDto {
     description: 'Question options' 
   })
   @IsArray()
+  @ArrayMinSize(2, { message: 'Question must have at least 2 options' })
+  @ArrayMaxSize(4, { message: 'Question cannot have more than 4 options' })
   options: { text: string; isCorrect: boolean }[];
 }

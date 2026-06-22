@@ -27,6 +27,10 @@ export class ResultsService {
       throw new NotFoundException('Test not found');
     }
 
+    if (test.questions.length === 0) {
+      throw new BadRequestException('Test has no questions');
+    }
+
     if (test.results.length > 0) {
       throw new BadRequestException('You have already completed this test');
     }
@@ -63,10 +67,13 @@ export class ResultsService {
           console.log('Correct multiple choice! Total correct:', correctAnswers);
         }
       } else if (question.type.name === 'TEXT') {
-        if (typeof userAnswer === 'string' && userAnswer.trim().toLowerCase() === 
-            correctOptions[0]?.text.trim().toLowerCase()) {
-          correctAnswers++;
-          console.log('Correct text answer! Total correct:', correctAnswers);
+        if (typeof userAnswer === 'string' && correctOptions.length > 0) {
+          const normalizedUserAnswer = userAnswer.trim().toLowerCase();
+          const normalizedCorrectAnswer = correctOptions[0].text.trim().toLowerCase();
+          if (normalizedUserAnswer === normalizedCorrectAnswer) {
+            correctAnswers++;
+            console.log('Correct text answer! Total correct:', correctAnswers);
+          }
         }
       }
     }

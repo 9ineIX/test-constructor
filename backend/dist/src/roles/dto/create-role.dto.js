@@ -19,6 +19,9 @@ __decorate([
     (0, swagger_1.ApiProperty)({ example: 'TEACHER', description: 'Role name' }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.MinLength)(3, { message: 'Role name must be at least 3 characters long' }),
+    (0, class_validator_1.MaxLength)(50, { message: 'Role name cannot exceed 50 characters' }),
+    (0, class_validator_1.Matches)(/^[A-Z_]+$/, { message: 'Role name must contain only uppercase letters and underscores' }),
     __metadata("design:type", String)
 ], CreateRoleDto.prototype, "name", void 0);
 //# sourceMappingURL=create-role.dto.js.map

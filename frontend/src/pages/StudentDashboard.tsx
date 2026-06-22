@@ -17,8 +17,7 @@ export default function StudentDashboard() {
 
   const loadData = async () => {
     try {
-      const [availableRes, completedRes, resultsRes] = await Promise.all([
-        testsAPI.getAll(),
+      const [availableRes, resultsRes] = await Promise.all([
         testsAPI.getAll(),
         resultsAPI.getAll()
       ]);
@@ -53,12 +52,46 @@ export default function StudentDashboard() {
     return score; // Бэкенд уже сохраняет оценку 2-5
   };
 
-  const getPercentage = (score: number) => {
-    // Конвертируем оценку 2-5 обратно в проценты для отображения
-    if (score >= 5) return 100;
-    if (score >= 4) return 80;
-    if (score >= 3) return 60;
-    return 40;
+  const getPercentage = (result: any, test: any) => {
+    // Calculate actual percentage based on correct answers
+    if (!result || !test || !test.questions || test.questions.length === 0) {
+      return 0;
+    }
+
+    const totalQuestions = test.questions.length;
+    let correctAnswers = 0;
+
+    for (const question of test.questions) {
+      const userAnswer = result.answers?.[question.id];
+      if (!userAnswer) continue;
+
+      const correctOptions = question.options?.filter((opt: any) => opt.isCorrect) || [];
+      
+      if (question.type?.name === 'SINGLE') {
+        const selectedOption = question.options?.find((opt: any) => opt.id === userAnswer[0]);
+        if (selectedOption?.isCorrect) {
+          correctAnswers++;
+        }
+      } else if (question.type?.name === 'MULTIPLE') {
+        const userSelectedOptions = Array.isArray(userAnswer) ? userAnswer : [userAnswer];
+        const correctOptionIds = correctOptions.map((opt: any) => opt.id);
+        
+        if (userSelectedOptions.length === correctOptionIds.length &&
+            userSelectedOptions.every((id: string) => correctOptionIds.includes(id))) {
+          correctAnswers++;
+        }
+      } else if (question.type?.name === 'TEXT') {
+        if (typeof userAnswer === 'string' && correctOptions.length > 0) {
+          const normalizedUserAnswer = userAnswer.trim().toLowerCase();
+          const normalizedCorrectAnswer = correctOptions[0].text.trim().toLowerCase();
+          if (normalizedUserAnswer === normalizedCorrectAnswer) {
+            correctAnswers++;
+          }
+        }
+      }
+    }
+
+    return Math.round((correctAnswers / totalQuestions) * 100);
   };
 
   const startTest = (testId: string) => {
@@ -115,7 +148,13 @@ export default function StudentDashboard() {
               <p className="text-sm text-gray-600">Успешность</p>
               <p className="text-2xl font-bold text-gray-900">
                 {results.length > 0 
-                  ? getPercentage(Math.round(results.reduce((sum, r) => sum + r.score, 0) / results.length))
+                  ? (() => {
+                      const totalPercentage = results.reduce((sum: number, r: any) => {
+                        const test = completedTests.find((t: any) => t.id === r.testId);
+                        return sum + getPercentage(r, test);
+                      }, 0);
+                      return Math.round(totalPercentage / results.length);
+                    })()
                   : 0}%
               </p>
             </div>
@@ -221,7 +260,7 @@ export default function StudentDashboard() {
                             {getGrade(result?.score || 0)}
                           </p>
                           <p className="text-xs text-gray-500">
-                            Успешность: {getPercentage(result?.score || 0)}%
+                            Успешность: {getPercentage(result, test)}%
                           </p>
                         </div>
                         <div className="text-right">
@@ -294,7 +333,7 @@ export default function StudentDashboard() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`text-sm font-medium ${getScoreColor(result.score)}`}>
-                            {getPercentage(result.score)}%
+                            {getPercentage(result, test)}%
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

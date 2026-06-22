@@ -35,12 +35,23 @@ let QuestionsService = class QuestionsService {
             if (test.questions.length >= 10) {
                 throw new common_1.BadRequestException('Test cannot have more than 10 questions');
             }
+            const existingQuestionWithSameOrder = test.questions.find(q => q.order === data.order);
+            if (existingQuestionWithSameOrder) {
+                throw new common_1.BadRequestException(`Question with order ${data.order} already exists in this test`);
+            }
+            if (data.options.length < 2) {
+                throw new common_1.BadRequestException('Question must have at least 2 options');
+            }
             if (data.options.length > 4) {
                 throw new common_1.BadRequestException('Question cannot have more than 4 options');
             }
             const hasCorrectOption = data.options.some(option => option.isCorrect);
             if (!hasCorrectOption) {
                 throw new common_1.BadRequestException('Question must have at least one correct option');
+            }
+            const hasEmptyOption = data.options.some(option => !option.text || option.text.trim() === '');
+            if (hasEmptyOption) {
+                throw new common_1.BadRequestException('Question options cannot be empty');
             }
             const result = await this.prisma.question.create({
                 data: {
@@ -144,13 +155,20 @@ let QuestionsService = class QuestionsService {
             throw new common_1.ForbiddenException('You can only update questions from your own tests');
         }
         const { options, ...updateData } = data;
-        if (options && options.length > 4) {
-            throw new common_1.BadRequestException('Question cannot have more than 4 options');
-        }
         if (options) {
+            if (options.length < 2) {
+                throw new common_1.BadRequestException('Question must have at least 2 options');
+            }
+            if (options.length > 4) {
+                throw new common_1.BadRequestException('Question cannot have more than 4 options');
+            }
             const hasCorrectOption = options.some(option => option.isCorrect);
             if (!hasCorrectOption) {
                 throw new common_1.BadRequestException('Question must have at least one correct option');
+            }
+            const hasEmptyOption = options.some(option => !option.text || option.text.trim() === '');
+            if (hasEmptyOption) {
+                throw new common_1.BadRequestException('Question options cannot be empty');
             }
         }
         return this.prisma.question.update({

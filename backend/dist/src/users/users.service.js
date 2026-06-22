@@ -139,26 +139,43 @@ let UsersService = class UsersService {
                 throw new common_1.ConflictException('User with this email already exists');
             }
         }
+        const updateData = {
+            email: data.email,
+            name: data.name,
+            roleId: data.roleId,
+        };
+        if (data.password) {
+            updateData.password = await bcrypt.hash(data.password, 10);
+        }
         return this.prisma.user.update({
             where: { id },
-            data,
+            data: updateData,
             select: {
                 id: true,
                 email: true,
                 name: true,
                 roleId: true,
                 role: true,
-                createdAt: true,
             },
         });
     }
     async delete(id) {
         const user = await this.prisma.user.findUnique({
             where: { id },
+            include: {
+                tests: true,
+                results: true,
+            },
         });
         if (!user) {
             throw new common_1.NotFoundException('User not found');
         }
+        await this.prisma.result.deleteMany({
+            where: { userId: id },
+        });
+        await this.prisma.test.deleteMany({
+            where: { authorId: id },
+        });
         return this.prisma.user.delete({
             where: { id },
             select: {
@@ -233,6 +250,23 @@ let UsersService = class UsersService {
             };
         });
         return students;
+    }
+    async getAllStudents() {
+        const users = await this.prisma.user.findMany({
+            where: {
+                role: {
+                    name: 'STUDENT',
+                },
+            },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                roleId: true,
+                role: true,
+            },
+        });
+        return users;
     }
 };
 exports.UsersService = UsersService;

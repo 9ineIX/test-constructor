@@ -11,6 +11,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import TestConstructor from './pages/TestConstructor';
 import TestTaking from './pages/TestTaking';
 import TestResults from './pages/TestResults';
+import { Toaster } from 'react-hot-toast';
 import './index.css';
 
 function App() {
@@ -33,6 +34,7 @@ function App() {
   if (!isAuthenticated) {
     return (
       <Router>
+        <Toaster position="top-right" />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -57,6 +59,7 @@ function App() {
 
   return (
     <Router>
+      <Toaster position="top-right" />
       <Layout>
         <Routes>
           <Route path="/" element={getDashboardComponent()} />

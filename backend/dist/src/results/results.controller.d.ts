@@ -71,6 +71,20 @@ export declare class ResultsController {
         userId: string;
         answers: import("@prisma/client/runtime/library").JsonValue;
     })[]>;
+    getTestResults(testId: string, req: any): Promise<({
+        user: {
+            id: string;
+            name: string;
+            email: string;
+        };
+    } & {
+        id: string;
+        createdAt: Date;
+        score: number;
+        testId: string;
+        userId: string;
+        answers: import("@prisma/client/runtime/library").JsonValue;
+    })[]>;
     findOne(id: string, req: any): Promise<{
         user: {
             id: string;
@@ -124,18 +138,4 @@ export declare class ResultsController {
         userId: string;
         answers: import("@prisma/client/runtime/library").JsonValue;
     }>;
-    getTestResults(testId: string, req: any): Promise<({
-        user: {
-            id: string;
-            name: string;
-            email: string;
-        };
-    } & {
-        id: string;
-        createdAt: Date;
-        score: number;
-        testId: string;
-        userId: string;
-        answers: import("@prisma/client/runtime/library").JsonValue;
-    })[]>;
 }

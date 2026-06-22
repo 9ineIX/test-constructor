@@ -53,6 +53,7 @@ export declare class UsersService {
         email?: string;
         name?: string;
         roleId?: string;
+        password?: string;
     }): Promise<{
         id: string;
         name: string;
@@ -62,7 +63,6 @@ export declare class UsersService {
         };
         email: string;
         roleId: string;
-        createdAt: never;
     }>;
     delete(id: string): Promise<{
         id: string;
@@ -85,4 +85,14 @@ export declare class UsersService {
         roleId: string;
     }>;
     getStudentsByTeacher(teacherId: string): Promise<any[]>;
+    getAllStudents(): Promise<{
+        id: string;
+        name: string;
+        role: {
+            id: string;
+            name: string;
+        };
+        email: string;
+        roleId: string;
+    }[]>;
 }

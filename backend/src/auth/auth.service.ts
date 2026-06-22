@@ -14,17 +14,17 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
-  async register(data: { email: string; password: string; name?: string; roleName?: string }) {
-    const { email, password, name, roleName = 'STUDENT' } = data;
+  async register(data: { email: string; password: string; name?: string }) {
+    const { email, password, name } = data;
 
     const existingUser = await this.usersService.findByEmail(email);
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
     }
 
-    const role = await this.rolesService.findByName(roleName);
+    const role = await this.rolesService.findByName('STUDENT');
     if (!role) {
-      throw new ConflictException(`Role '${roleName}' not found`);
+      throw new ConflictException('Role STUDENT not found');
     }
 
     return this.usersService.create({
